@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Debbie Stores</title>
+<style>
+:root{--bg:#fdf8f1;--card:#fff;--ink:#2b2118;--mut:#7a6a5a;--acc:#1f7a4d;--acc2:#e8f3ec;--line:#eadfce}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45}
+.wrap{max-width:960px;margin:0 auto;padding:16px}
+header{text-align:center;padding:22px 0 10px}
+header h1{margin:0;font-size:2rem;color:var(--acc)}
+header p{margin:4px 0 0;color:var(--mut)}
+#tabs{display:flex;gap:8px;overflow-x:auto;padding:12px 0}
+#tabs button{white-space:nowrap;border:1px solid var(--line);background:var(--card);padding:8px 14px;border-radius:999px;font-size:.95rem;cursor:pointer}
+#tabs button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.pic{aspect-ratio:1;background:var(--acc2);display:flex;align-items:center;justify-content:center;font-size:2.6rem}
+.pic img{width:100%;height:100%;object-fit:cover}
+.info{padding:10px;display:flex;flex-direction:column;gap:4px;flex:1}
+.name{font-weight:600}
+.price{color:var(--acc);font-weight:700}
+.desc{font-size:.85rem;color:var(--mut)}
+button{font:inherit;cursor:pointer}
+.add{margin-top:auto;border:0;background:var(--acc);color:#fff;padding:9px;border-radius:10px;font-weight:600}
+.del{border:1px solid #c0392b;color:#c0392b;background:transparent;padding:6px;border-radius:10px;font-size:.8rem}
+.empty{grid-column:1/-1;text-align:center;color:var(--mut);padding:30px 10px}
+section.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:20px}
+section.box h2{margin:0 0 10px;font-size:1.2rem}
+.row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.row .n{flex:1}
+.q button{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--bg)}
+input,select,textarea{width:100%;padding:10px;margin:5px 0;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit}
+.total{font-size:1.1rem;font-weight:700;text-align:right;margin:10px 0}
+a.wa{display:block;text-align:center;background:#25d366;color:#08331a;font-weight:700;padding:13px;border-radius:12px;text-decoration:none}
+.msg{color:var(--mut);font-size:.9rem;margin-top:6px}
+footer{text-align:center;color:var(--mut);font-size:.85rem;padding:24px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1>Debbie Stores</h1><p>Ofada rice · Men’s clothes · Women’s clothes</p></header>
+  <div id="tabs"></div>
+  <div id="grid"></div>
+  <section class="box" id="cartbox"></section>
+  <div id="admin"></div>
+  <footer>Orders are sent straight to our WhatsApp.</footer>
+</div>
+
+<script>
+/* ===== 1. YOUR PRODUCTS: add new items here (one line each) ===== */
+const PRODUCTS = [
+  // { id:"1", name:"Ofada rice 5kg", price:12000, cat:"Ofada Rice", desc:"Fresh local rice", img:"images/rice.jpg" },
+];
+
+/* ===== 2. SETTINGS ===== */
+const PHONE = "2348136779764"; // 08136779764 in international format
+const CATS = ["Ofada Rice", "Men’s Clothes", "Women’s Clothes"];
+const ICON = {"Ofada Rice":"🍚", "Men’s Clothes":"👔", "Women’s Clothes":"👗"};
+
+/* ===== 3. CODE ===== */
+let products = PRODUCTS;
+try { const s = localStorage.getItem("ds-products"); if (s) products = JSON.parse(s); } catch (e) {}
+let cat = "All", cart = {}, name = "", addr = "";
+const admin = location.hash === "#admin";
+try { cart = JSON.parse(localStorage.getItem("ds-cart") || "{}"); } catch (e) {}
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = n => "₦" + Number(n).toLocaleString("en-NG");
+const saveCart = () => localStorage.setItem("ds-cart", JSON.stringify(cart));
+const saveProducts = () => localStorage.setItem("ds-products", JSON.stringify(products));
+
+function tabs() {
+  $("#tabs").innerHTML = ["All", ...CATS].map(c =>
+    `<button class="${c === cat ? "on" : ""}" data-cat="${esc(c)}">${esc(c)}</button>`).join("");
+}
+
+function grid() {
+  const list = products.filter(p => cat === "All" || p.cat === cat);
+  $("#grid").innerHTML = list.length ? list.map(p => `
+    <div class="card">
+      <div class="pic">${p.img ? `<img src="${esc(p.img)}" alt="${esc(p.name)}">` : (ICON[p.cat] || "🛍️")}</div>
+      <div class="info">
+        <div class="name">${esc(p.name)}</div>
+        <div class="price">${fmt(p.price)}</div>
+        ${p.desc ? `<div class="desc">${esc(p.desc)}</div>` : ""}
+        <button class="add" data-add="${p.id}">Add to cart</button>
+        ${admin ? `<button class="del" data-del="${p.id}">Delete</button>` : ""}
+      </div>
+    </div>`).join("") : `<div class="empty">No items here yet. Please check back soon.</div>`;
+}
+
+function order() {
+  const items = Object.entries(cart).map(([id, q]) => [products.find(p => p.id === id), q]).filter(x => x[0]);
+  const total = items.reduce((s, [p, q]) => s + p.price * q, 0);
+  let t = "Hello Debbie Stores, I would like to order:\n" +
+    items.map(([p, q]) => `- ${q} × ${p.name} (${fmt(p.price * q)})`).join("\n") + `\n\nTotal: ${fmt(total)}`;
+  if (name) t += `\nName: ${name}`;
+  if (addr) t += `\nAddress: ${addr}`;
+  return { items, total, href: `https://wa.me/${PHONE}?text=${encodeURIComponent(t)}` };
+}
+
+function cartView() {
+  const o = order();
+  $("#cartbox").innerHTML = "<h2>Your cart</h2>" + (o.items.length ? `
+    ${o.items.map(([p, q]) => `<div class="row"><span class="n">${esc(p.name)}<br><small>${fmt(p.price)}</small></span>
+      <span class="q"><button data-dec="${p.id}">−</button> ${q} <button data-inc="${p.id}">+</button></span></div>`).join("")}
+    <div class="total">Total: ${fmt(o.total)}</div>
+    <input id="cn" placeholder="Your name" value="${esc(name)}">
+    <textarea id="ca" rows="2" placeholder="Delivery address / phone number">${esc(addr)}</textarea>
+    <a class="wa" id="wa" href="${o.href}" target="_blank" rel="noopener">Order on WhatsApp</a>
+    <div class="msg">This opens WhatsApp with your order ready to send.</div>`
+    : `<div class="msg">Your cart is empty.</div>`);
+}
+
+function adminView() {
+  if (!admin) return;
+  $("#admin").innerHTML = `<section class="box"><h2>Add an item</h2>
+    <input id="an" placeholder="Item name (e.g. Ofada rice 5kg)">
+    <input id="ap" type="number" placeholder="Price in ₦">
+    <select id="ac">${CATS.map(c => `<option>${esc(c)}</option>`).join("")}</select>
+    <input id="ad" placeholder="Short description (optional)">
+    <input id="ai" placeholder="Photo file name (optional), e.g. images/rice.jpg">
+    <button class="add" id="asave" style="width:100%;margin-top:8px">Add item</button>
+    <button class="add" id="acopy" style="width:100%;margin-top:8px;background:#444">Copy product list for the website</button>
+    <div class="msg" id="astat">Items added here show on this device only. To show them to all customers, tap “Copy product list”, then paste it into the PRODUCTS list in index.html, replacing the brackets.</div></section>`;
+}
+
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const d = b.dataset;
+  if (d.cat) { cat = d.cat; tabs(); grid(); }
+  else if (d.add) { cart[d.add] = (cart[d.add] || 0) + 1; saveCart(); cartView(); }
+  else if (d.inc) { cart[d.inc]++; saveCart(); cartView(); }
+  else if (d.dec) { if (--cart[d.dec] <= 0) delete cart[d.dec]; saveCart(); cartView(); }
+  else if (d.del) { products = products.filter(p => p.id !== d.del); saveProducts(); grid(); }
+  else if (b.id === "asave") {
+    const n = $("#an").value.trim(), pr = Number($("#ap").value);
+    if (!n || !(pr > 0)) { $("#astat").textContent = "Please enter a name and a price."; return; }
+    products = [{ id: "p" + Date.now(), name: n, price: pr, cat: $("#ac").value, desc: $("#ad").value.trim(), img: $("#ai").value.trim() }, ...products];
+    saveProducts(); grid();
+    ["an","ap","ad","ai"].forEach(i => $("#" + i).value = "");
+    $("#astat").textContent = "Added.";
+  }
+  else if (b.id === "acopy") {
+    navigator.clipboard.writeText(JSON.stringify(products, null, 2))
+      .then(() => $("#astat").textContent = "Copied. Paste it into PRODUCTS in index.html.")
+      .catch(() => $("#astat").textContent = "Could not copy.");
+  }
+});
+
+document.addEventListener("input", e => {
+  if (e.target.id === "cn") name = e.target.value;
+  else if (e.target.id === "ca") addr = e.target.value;
+  else return;
+  const w = $("#wa"); if (w) w.href = order().href;
+});
+
+tabs(); grid(); cartView(); adminView();
+</script>
+</body>
+</html>
